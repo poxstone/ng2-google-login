@@ -9,12 +9,9 @@ declare const gapi: any;
 
 @Injectable()
 export class AuthService {
-  private APIROOT = 'endpoint2-dot-efor-gae-temp-01.appspot.com';
-  private APILOCAL = 'localhost:8080';
-  private EXTAPI = false; // true force to load APIROOT from local
   private gapi:any = {};
-  private apiName:string;
-  private apiVersion:string;
+  private apis:any = [];
+  private countApis:number;
 
   constructor() {
     this.gapi = getWindow().gapi;
@@ -24,7 +21,8 @@ export class AuthService {
    * Calling Google login API and fetching account details.
    * @param callback Callback to function
    */
-  public apiInit(apiName:string, apiVersion:string, callback) {
+  public apiInit(apis:any, callback) {
+    this.apis = apis;
     let auth2: any;
     let result: any;
     let error: any;
@@ -55,8 +53,17 @@ export class AuthService {
 
     });
 
-    this.apiAutoInit(apiName, apiVersion, callback);
+    // multiple apis
+    for (let i=0; i < this.apis.length; i++ ) {
+      this.countApis = i;
+      let apiName:string = apis[i].apiName;
+      let apiVersion:string = apis[i].apiVersion;
+      this.apiAutoInit(apiName, apiVersion, callback);
+    }
+
   }
+
+  public client = gapi.client;
 
   private saveLogin(token:string, profile:any):any {
     let result:any;
@@ -83,10 +90,8 @@ export class AuthService {
   }
 
   public apiAutoInit (apiName:string, apiVersion:string, callback) {
-    this.apiName = apiName;
-    this.apiVersion = apiVersion;
-    let host = location.host.match(/localhost/) ? this.APILOCAL : this.APIROOT ;
-    host = this.EXTAPI ? this.APIROOT : host;
+    let host = location.host.match(/localhost/) ? AppGlobals.APILOCAL : AppGlobals.APIROOT;
+    host = AppGlobals.EXTAPI ? AppGlobals.APIROOT : host;
     let apiRoot = '//' + host + '/_ah/api';
     var apisToLoad;
 
@@ -103,10 +108,10 @@ export class AuthService {
 
     // gapi was loaded
     if ( this.gapi.client && this.gapi.client.load ) {
-      this.gapi.client.load(this.apiName, this.apiVersion, callbackInint, apiRoot); // load Api
+      this.gapi.client.load(apiName, apiVersion, callbackInint, apiRoot); // load Api
       this.gapi.client.load('oauth2', 'v2', callbackInint);
     } else {
-      setTimeout(() => { this.apiInit(apiName, apiVersion, callback) }, 250)
+      setTimeout(() => { this.apiInit(this.apis, callback) }, 250)
     }
 
   }
